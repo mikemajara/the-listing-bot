@@ -1,0 +1,22 @@
+{
+  "name": "list-bot",
+  "version": "1.0.0",
+  "description": "Creates a list and allows users to be added to the list",
+  "main": "bot.js",
+  "dependencies": {
+    "@grammyjs/menu": "^1.0.4",
+    "grammy": "^1.7.1",
+    "typescript": "^4.6.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "tsc && node bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "bot",
+    "telegram"
+  ],
+  "author": "mikemajara <fmiguel05@gmail.com>",
+  "license": "MIT"
+}
