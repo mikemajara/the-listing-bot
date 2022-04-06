@@ -61,13 +61,17 @@ const menu = new menu_1.Menu("list", {
 })
     .text("➕ voy", (ctx) => {
     let name = getName(ctx);
+    let origLength = ctx.session.list.length;
     ctx.session.list = lodash_1.default.uniqBy(ctx.session.list.concat(name), (e) => e);
-    ctx.editMessageText(formatList(ctx));
+    if (origLength !== ctx.session.list.length)
+        ctx.editMessageText(formatList(ctx));
 })
     .text("➖ no voy", (ctx) => {
     let name = getName(ctx);
+    let origLength = ctx.session.list.length;
     ctx.session.list = ctx.session.list.filter((e) => e !== name && !new RegExp(`\(${name}\)`, "gm").test(e));
-    ctx.editMessageText(formatList(ctx));
+    if (origLength !== ctx.session.list.length)
+        ctx.editMessageText(formatList(ctx));
 })
     .row()
     .text("🧑‍🤝‍🧑 Invito", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
