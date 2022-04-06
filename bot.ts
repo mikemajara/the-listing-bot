@@ -62,7 +62,7 @@ const menu = new Menu<MyContext>("list")
     );
     ctx.editMessageText(formatNames(ctx));
   })
-  .text("Invitado", async (ctx: MyContext) => {
+  .text("🧑‍🤝‍🧑", async (ctx: MyContext) => {
     await inviteQuestion.replyWithMarkdown(
       ctx,
       "Como se llama tu invitado?" +

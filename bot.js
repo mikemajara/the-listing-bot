@@ -48,7 +48,7 @@ const menu = new menu_1.Menu("list")
     ctx.session.list = ctx.session.list.filter((e) => e !== name && !new RegExp(`\(${name}\)`, "gm").test(e));
     ctx.editMessageText(formatNames(ctx));
 })
-    .text("Invitado", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
+    .text("🧑‍🤝‍🧑", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
     yield inviteQuestion.replyWithMarkdown(ctx, "Como se llama tu invitado?" +
         inviteQuestion.messageSuffixMarkdown());
 }));
