@@ -13,9 +13,8 @@ interface SessionData {
 // Flavor the context type to include sessions.
 type MyContext = Context & SessionFlavor<SessionData>;
 
-const URL = "https://zpwcqzexvdiqicbjhdeh.supabase.co";
-const KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpwd2NxemV4dmRpcWljYmpoZGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDkxOTU3MzYsImV4cCI6MTk2NDc3MTczNn0.wW_ILnhJ68TK0_nr11nOA2giRKpwS_OcMNeVU-8e4_M";
+const URL = process.env.SUPABASE_URL ?? "";
+const KEY = process.env.SUPABASE_KEY ?? "";
 
 // supabase instance
 const supabase = createClient(URL, KEY);
