@@ -156,5 +156,6 @@ bot.command("clearall", clearAll);
 bot.command("showlist", showList);
 bot.command("clear", (ctx) => {
     clear(ctx);
-    ctx.deleteMessage();
+    ctx.deleteMessage().catch((err) => console.log(err));
 });
+bot.command("stop", (ctx) => bot.stop());

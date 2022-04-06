@@ -106,6 +106,7 @@ const titleQuestion = new StatelessQuestion(
   "title",
   (ctx: MyContext) => {
     ctx.session.title = ctx.message?.text ?? ctx.session.title;
+    ctx.deleteMessage();
     showList(ctx);
   },
 );
@@ -194,5 +195,7 @@ bot.command("clearall", clearAll);
 bot.command("showlist", showList);
 bot.command("clear", (ctx) => {
   clear(ctx);
-  ctx.deleteMessage();
+  ctx.deleteMessage().catch((err) => console.log(err));
 });
+
+bot.command("stop", (ctx) => bot.stop());
