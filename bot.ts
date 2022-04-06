@@ -69,19 +69,23 @@ const menu = new Menu<MyContext>("list", {
 })
   .text("➕ voy", (ctx: MyContext) => {
     let name = getName(ctx);
+    let origLength = ctx.session.list.length;
     ctx.session.list = _.uniqBy(
       ctx.session.list.concat(name),
       (e: string) => e,
     );
-    ctx.editMessageText(formatList(ctx));
+    if (origLength !== ctx.session.list.length)
+      ctx.editMessageText(formatList(ctx));
   })
   .text("➖ no voy", (ctx: MyContext) => {
     let name = getName(ctx);
+    let origLength = ctx.session.list.length;
     ctx.session.list = ctx.session.list.filter(
       (e: string) =>
         e !== name && !new RegExp(`\(${name}\)`, "gm").test(e),
     );
-    ctx.editMessageText(formatList(ctx));
+    if (origLength !== ctx.session.list.length)
+      ctx.editMessageText(formatList(ctx));
   })
   .row()
   .text("🧑‍🤝‍🧑 Invito", async (ctx: MyContext) => {
