@@ -89,7 +89,7 @@ bot.use(menu);
 const titleQuestion = new stateless_question_1.StatelessQuestion("title", (ctx) => {
     var _a, _b;
     ctx.session.title = (_b = (_a = ctx.message) === null || _a === void 0 ? void 0 : _a.text) !== null && _b !== void 0 ? _b : ctx.session.title;
-    ctx.deleteMessage();
+    ctx.deleteMessage().catch((err) => console.log(err));
     showList(ctx);
 });
 const inviteQuestion = new stateless_question_1.StatelessQuestion("invite", (ctx) => __awaiter(void 0, void 0, void 0, function* () {

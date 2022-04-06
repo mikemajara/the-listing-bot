@@ -106,7 +106,7 @@ const titleQuestion = new StatelessQuestion(
   "title",
   (ctx: MyContext) => {
     ctx.session.title = ctx.message?.text ?? ctx.session.title;
-    ctx.deleteMessage();
+    ctx.deleteMessage().catch((err) => console.log(err));
     showList(ctx);
   },
 );
