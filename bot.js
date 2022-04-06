@@ -51,6 +51,12 @@ const menu = new menu_1.Menu("list")
     .text("🧑‍🤝‍🧑", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
     yield inviteQuestion.replyWithMarkdown(ctx, "Como se llama tu invitado?" +
         inviteQuestion.messageSuffixMarkdown());
+}))
+    .text("🔄", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
+    ctx.deleteMessage();
+    ctx.reply(formatNames(ctx), {
+        reply_markup: menu,
+    });
 }));
 // Make it interactive.
 bot.use(menu);

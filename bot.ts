@@ -68,8 +68,13 @@ const menu = new Menu<MyContext>("list")
       "Como se llama tu invitado?" +
         inviteQuestion.messageSuffixMarkdown(),
     );
+  })
+  .text("🔄", async (ctx: MyContext) => {
+    ctx.deleteMessage();
+    ctx.reply(formatNames(ctx), {
+      reply_markup: menu,
+    });
   });
-
 // Make it interactive.
 bot.use(menu);
 
