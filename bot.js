@@ -8,18 +8,35 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 const grammy_1 = require("grammy");
 const menu_1 = require("@grammyjs/menu");
 const storage_supabase_1 = require("@grammyjs/storage-supabase");
 const supabase_js_1 = require("@supabase/supabase-js");
 const stateless_question_1 = require("@grammyjs/stateless-question");
-const URL = "https://zpwcqzexvdiqicbjhdeh.supabase.co";
-const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpwd2NxemV4dmRpcWljYmpoZGVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDkxOTU3MzYsImV4cCI6MTk2NDc3MTczNn0.wW_ILnhJ68TK0_nr11nOA2giRKpwS_OcMNeVU-8e4_M";
+const lodash_1 = __importDefault(require("lodash"));
+require("dotenv/config");
+const initialState = {
+    list: [],
+    title: "Untitled",
+    lastMessageId: undefined,
+};
+const URL = (_a = process.env.SUPABASE_URL) !== null && _a !== void 0 ? _a : "";
+const KEY = (_b = process.env.SUPABASE_KEY) !== null && _b !== void 0 ? _b : "";
+const BOT_TOKEN = (_c = process.env.BOT_TOKEN) !== null && _c !== void 0 ? _c : "";
+if (!URL || !KEY) {
+    console.log(`URL: ${process.env.SUPABASE_URL}`);
+    console.log(`KEY: ${process.env.SUPABASE_KEY}`);
+    throw Error("URL and KEY must have a value");
+}
 // supabase instance
 const supabase = (0, supabase_js_1.createClient)(URL, KEY);
 // Create an instance of the `Bot` class and pass your authentication token to it.
-const bot = new grammy_1.Bot("5288372022:AAHT_fV-9n8nY_SdevcvbWLcLh-g7WFZQkY"); // <-- put your authentication token between the ""
+const bot = new grammy_1.Bot(BOT_TOKEN); // <-- put your authentication token between the ""
 // create storage
 const storage = (0, storage_supabase_1.supabaseAdapter)({
     supabase,
@@ -27,61 +44,68 @@ const storage = (0, storage_supabase_1.supabaseAdapter)({
 });
 // Create bot and register session middleware
 bot.use((0, grammy_1.session)({
-    initial: () => ({ list: [], title: "Untitled" }),
+    initial: () => initialState,
     storage,
-    // getSessionKey: (ctx: Context): string | undefined =>
-    //   `${ctx.chat?.id}${ctx.message?.message_id}`,
 }));
 // You can now register listeners on your bot object `bot`.
 // grammY will call the listeners when users send messages to your bot.
 // Handle the /start command.
 bot.command("start", (ctx) => ctx.reply("Welcome! Up and running."));
 // Create a simple menu.
-const menu = new menu_1.Menu("list")
-    .text("👍", (ctx) => {
-    let name = getName(ctx);
-    ctx.session.list = ctx.session.list.concat(name);
-    ctx.editMessageText(formatNames(ctx));
+const menu = new menu_1.Menu("list", {
+    onMenuOutdated: (ctx) => {
+        console.log(`message outdated:\n${getMessage(ctx)}`);
+        ctx.menu.update();
+        // ctx.deleteMessage();
+    },
 })
-    .text("👎", (ctx) => {
+    .text("➕ voy", (ctx) => {
+    let name = getName(ctx);
+    ctx.session.list = lodash_1.default.uniqBy(ctx.session.list.concat(name), (e) => e);
+    ctx.editMessageText(formatList(ctx));
+})
+    .text("➖ no voy", (ctx) => {
     let name = getName(ctx);
     ctx.session.list = ctx.session.list.filter((e) => e !== name && !new RegExp(`\(${name}\)`, "gm").test(e));
-    ctx.editMessageText(formatNames(ctx));
+    ctx.editMessageText(formatList(ctx));
 })
-    .text("🧑‍🤝‍🧑", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
-    yield inviteQuestion.replyWithMarkdown(ctx, "Como se llama tu invitado?" +
+    .row()
+    .text("🧑‍🤝‍🧑 Invito", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
+    var _d;
+    yield inviteQuestion.replyWithMarkdown(ctx, `${(_d = ctx.from) === null || _d === void 0 ? void 0 : _d.first_name}, cómo se llama tu invitad@?` +
         inviteQuestion.messageSuffixMarkdown());
 }))
-    .text("🔄", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
-    ctx.deleteMessage();
-    ctx.reply(formatNames(ctx), {
-        reply_markup: menu,
-    });
-}));
+    .text("🔄 Actualizar", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        yield ctx.editMessageText(formatList(ctx));
+    }
+    catch (err) {
+        console.log(err);
+    }
+}))
+    .row();
 // Make it interactive.
 bot.use(menu);
 const titleQuestion = new stateless_question_1.StatelessQuestion("title", (ctx) => {
     var _a, _b;
     ctx.session.title = (_b = (_a = ctx.message) === null || _a === void 0 ? void 0 : _a.text) !== null && _b !== void 0 ? _b : ctx.session.title;
-    ctx.reply(formatNames(ctx), {
-        reply_markup: menu,
-    });
+    ctx.deleteMessage();
+    showList(ctx);
 });
-const inviteQuestion = new stateless_question_1.StatelessQuestion("invite", (ctx) => {
-    var _a;
-    ctx.session.list = ctx.session.list.concat(`${(_a = ctx.message) === null || _a === void 0 ? void 0 : _a.text} (${getName(ctx)})`);
-    ctx.reply(formatNames(ctx), {
-        reply_markup: menu,
-    });
-});
+const inviteQuestion = new stateless_question_1.StatelessQuestion("invite", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
+    var _e;
+    ctx.session.list = ctx.session.list.concat(`${(_e = ctx.message) === null || _e === void 0 ? void 0 : _e.text} (${getName(ctx)})`);
+    yield ctx.reply("Hecho, actualiza la lista para ver los cambios");
+    // https://core.telegram.org/bots/api#updating-messages
+    // Please note, that it is currently only possible to edit
+    // messages without reply_markup or with inline keyboards.
+    // showList(ctx);
+}));
 bot.use(titleQuestion.middleware());
 bot.use(inviteQuestion.middleware());
 bot.command("newlist", (ctx) => __awaiter(void 0, void 0, void 0, function* () {
     // Send the menu.
     yield titleQuestion.replyWithMarkdown(ctx, "Give your list a title" + titleQuestion.messageSuffixMarkdown());
-    // await ctx.reply(`${ctx.session.title}\n\n`, {
-    //   reply_markup: menu,
-    // });
 }));
 // Handle other messages.
 // bot.on("message", (ctx) => ctx.reply("Got another message!"));
@@ -106,7 +130,31 @@ const isNameInList = (ctx) => {
     let name = getName(ctx);
     return ctx.session.list.includes(name);
 };
-const formatNames = (ctx) => {
+const formatList = (ctx) => {
     const preparedNames = ctx.session.list.map((e, i) => `${i + 1}. ${e}`);
     return `${ctx.session.title}\n\n${preparedNames.join("\n")}\n`;
 };
+const getTitleFromMessage = (ctx) => {
+    var _a;
+    // TODO
+    return (_a = getMessage(ctx).match(/^.*?$/gm)) === null || _a === void 0 ? void 0 : _a[1];
+};
+const clearAll = (ctx) => {
+    ctx.session = initialState;
+};
+const clear = (ctx) => {
+    let listName = getTitleFromMessage(ctx);
+    console.log(`deleting list\n${listName}`);
+    // ctx.session.list.pop()
+};
+const showList = (ctx) => {
+    ctx
+        .reply(formatList(ctx), { reply_markup: menu })
+        .then((msg) => (ctx.session.lastMessageId = msg.message_id));
+};
+bot.command("clearall", clearAll);
+bot.command("showlist", showList);
+bot.command("clear", (ctx) => {
+    clear(ctx);
+    ctx.deleteMessage();
+});

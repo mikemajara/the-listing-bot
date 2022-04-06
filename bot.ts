@@ -3,26 +3,41 @@ import { Menu } from "@grammyjs/menu";
 import { supabaseAdapter } from "@grammyjs/storage-supabase";
 import { createClient } from "@supabase/supabase-js";
 import { StatelessQuestion } from "@grammyjs/stateless-question";
+import _ from "lodash";
+
+import "dotenv/config";
 
 // Define the shape of our session.
 interface SessionData {
   title: string;
   list: string[];
+  lastMessageId: number | undefined;
 }
+
+const initialState = {
+  list: [],
+  title: "Untitled",
+  lastMessageId: undefined,
+};
 
 // Flavor the context type to include sessions.
 type MyContext = Context & SessionFlavor<SessionData>;
 
 const URL = process.env.SUPABASE_URL ?? "";
 const KEY = process.env.SUPABASE_KEY ?? "";
+const BOT_TOKEN = process.env.BOT_TOKEN ?? "";
+
+if (!URL || !KEY) {
+  console.log(`URL: ${process.env.SUPABASE_URL}`);
+  console.log(`KEY: ${process.env.SUPABASE_KEY}`);
+  throw Error("URL and KEY must have a value");
+}
 
 // supabase instance
 const supabase = createClient(URL, KEY);
 
 // Create an instance of the `Bot` class and pass your authentication token to it.
-const bot = new Bot<MyContext>(
-  "5288372022:AAHT_fV-9n8nY_SdevcvbWLcLh-g7WFZQkY",
-); // <-- put your authentication token between the ""
+const bot = new Bot<MyContext>(BOT_TOKEN); // <-- put your authentication token between the ""
 
 // create storage
 const storage = supabaseAdapter({
@@ -33,10 +48,8 @@ const storage = supabaseAdapter({
 // Create bot and register session middleware
 bot.use(
   session({
-    initial: () => ({ list: [], title: "Untitled" }),
+    initial: () => initialState,
     storage,
-    // getSessionKey: (ctx: Context): string | undefined =>
-    //   `${ctx.chat?.id}${ctx.message?.message_id}`,
   }),
 );
 
@@ -47,51 +60,70 @@ bot.use(
 bot.command("start", (ctx) => ctx.reply("Welcome! Up and running."));
 
 // Create a simple menu.
-const menu = new Menu<MyContext>("list")
-  .text("👍", (ctx: MyContext) => {
+const menu = new Menu<MyContext>("list", {
+  onMenuOutdated: (ctx) => {
+    console.log(`message outdated:\n${getMessage(ctx)}`);
+    ctx.menu.update();
+    // ctx.deleteMessage();
+  },
+})
+  .text("➕ voy", (ctx: MyContext) => {
     let name = getName(ctx);
-    ctx.session.list = ctx.session.list.concat(name);
-    ctx.editMessageText(formatNames(ctx));
+    ctx.session.list = _.uniqBy(
+      ctx.session.list.concat(name),
+      (e: string) => e,
+    );
+    ctx.editMessageText(formatList(ctx));
   })
-  .text("👎", (ctx: MyContext) => {
+  .text("➖ no voy", (ctx: MyContext) => {
     let name = getName(ctx);
     ctx.session.list = ctx.session.list.filter(
       (e: string) =>
         e !== name && !new RegExp(`\(${name}\)`, "gm").test(e),
     );
-    ctx.editMessageText(formatNames(ctx));
+    ctx.editMessageText(formatList(ctx));
   })
-  .text("🧑‍🤝‍🧑", async (ctx: MyContext) => {
+  .row()
+  .text("🧑‍🤝‍🧑 Invito", async (ctx: MyContext) => {
     await inviteQuestion.replyWithMarkdown(
       ctx,
-      "Como se llama tu invitado?" +
+      `${ctx.from?.first_name}, cómo se llama tu invitad@?` +
         inviteQuestion.messageSuffixMarkdown(),
     );
   })
-  .text("🔄", async (ctx: MyContext) => {
-    ctx.deleteMessage();
-    ctx.reply(formatNames(ctx), {
-      reply_markup: menu,
-    });
-  });
+  .text("🔄 Actualizar", async (ctx: MyContext) => {
+    try {
+      await ctx.editMessageText(formatList(ctx));
+    } catch (err) {
+      console.log(err);
+    }
+  })
+  .row();
 // Make it interactive.
 bot.use(menu);
 
-const titleQuestion = new StatelessQuestion("title", (ctx: any) => {
-  ctx.session.title = ctx.message?.text ?? ctx.session.title;
-  ctx.reply(formatNames(ctx), {
-    reply_markup: menu,
-  });
-});
+const titleQuestion = new StatelessQuestion(
+  "title",
+  (ctx: MyContext) => {
+    ctx.session.title = ctx.message?.text ?? ctx.session.title;
+    ctx.deleteMessage();
+    showList(ctx);
+  },
+);
 
-const inviteQuestion = new StatelessQuestion("invite", (ctx: any) => {
-  ctx.session.list = ctx.session.list.concat(
-    `${ctx.message?.text} (${getName(ctx)})`,
-  );
-  ctx.reply(formatNames(ctx), {
-    reply_markup: menu,
-  });
-});
+const inviteQuestion = new StatelessQuestion(
+  "invite",
+  async (ctx: MyContext) => {
+    ctx.session.list = ctx.session.list.concat(
+      `${ctx.message?.text} (${getName(ctx)})`,
+    );
+    await ctx.reply("Hecho, actualiza la lista para ver los cambios");
+    // https://core.telegram.org/bots/api#updating-messages
+    // Please note, that it is currently only possible to edit
+    // messages without reply_markup or with inline keyboards.
+    // showList(ctx);
+  },
+);
 
 bot.use(titleQuestion.middleware());
 bot.use(inviteQuestion.middleware());
@@ -102,9 +134,6 @@ bot.command("newlist", async (ctx: MyContext) => {
     ctx,
     "Give your list a title" + titleQuestion.messageSuffixMarkdown(),
   );
-  // await ctx.reply(`${ctx.session.title}\n\n`, {
-  //   reply_markup: menu,
-  // });
 });
 
 // Handle other messages.
@@ -134,9 +163,37 @@ const isNameInList = (ctx: MyContext) => {
   return ctx.session.list.includes(name);
 };
 
-const formatNames = (ctx: MyContext) => {
+const formatList = (ctx: MyContext) => {
   const preparedNames = ctx.session.list.map(
     (e: any, i: any) => `${i + 1}. ${e}`,
   );
   return `${ctx.session.title}\n\n${preparedNames.join("\n")}\n`;
 };
+
+const getTitleFromMessage = (ctx: MyContext) => {
+  // TODO
+  return getMessage(ctx).match(/^.*?$/gm)?.[1];
+};
+
+const clearAll = (ctx: MyContext) => {
+  ctx.session = initialState;
+};
+
+const clear = (ctx: MyContext) => {
+  let listName = getTitleFromMessage(ctx);
+  console.log(`deleting list\n${listName}`);
+  // ctx.session.list.pop()
+};
+
+const showList = (ctx: MyContext) => {
+  ctx
+    .reply(formatList(ctx), { reply_markup: menu })
+    .then((msg) => (ctx.session.lastMessageId = msg.message_id));
+};
+
+bot.command("clearall", clearAll);
+bot.command("showlist", showList);
+bot.command("clear", (ctx) => {
+  clear(ctx);
+  ctx.deleteMessage();
+});
